@@ -21,7 +21,7 @@ export const commonConfig: Configuration = {
     extensions: [".tsx", ".ts", ".js"],
   },
   output: {
-    filename: "js/[name]-[hash].js",
+    filename: "js/[name].[contenthash].js",
     path: path.resolve(__dirname, "dist/"),
     clean: true,
   },
