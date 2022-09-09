@@ -1,0 +1,13 @@
+.item-container {
+  :global {
+    width: 100%;
+    height: 40px;
+    background-color: burlywood;
+    border: 1px solid #000;
+    border-radius: 5px;
+
+    .item-text {
+      color: red;
+    }
+  }
+}
