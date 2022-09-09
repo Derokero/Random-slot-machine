@@ -15,6 +15,28 @@ export const commonConfig: Configuration = {
         use: "ts-loader",
         exclude: /node_modules/,
       },
+      {
+        test: /\.html$/,
+        use: "raw-loader",
+      },
+      {
+        test: /\.s[ac]ss$/i,
+        use: [
+          // Creates `style` nodes from JS strings
+          "style-loader",
+          // Translates CSS into CommonJS
+          {
+            loader: "css-loader",
+
+            options: {
+              importLoaders: 1,
+              modules: { exportLocalsConvention: "camelCase" },
+            },
+          },
+          // Compiles Sass to CSS
+          "sass-loader",
+        ],
+      },
     ],
   },
   resolve: {
@@ -27,7 +49,7 @@ export const commonConfig: Configuration = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: "./src/public/index.html",
+      template: "./src/html/index.html",
     }),
   ],
 };
