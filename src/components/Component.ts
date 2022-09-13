@@ -17,7 +17,7 @@ interface VirtualVariableMap {
   [variable: string]: VirtualVariable;
 }
 
-const variableExtractRegex = /{{(?<variable>[^\d][\w]+)}}/gi;
+const variableExtractRegex = /{{(?<variable>[^\d][\w]+)}}/g;
 
 export class Component {
   private _component: ChildNode;
@@ -42,7 +42,7 @@ export class Component {
       this._virtualVariableMap = this.mapVirtualVariables(this._textNodes);
 
       this.updateVariables();
-    } else throw new Error("Failed creating component!");
+    } else throw new Error("Failed to create component from template!");
   }
 
   /* Private */
