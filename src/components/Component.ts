@@ -1,33 +1,46 @@
-interface VirtualNode {
+interface VirtualNodeMap {
   node: ChildNode;
-  replaceTemplate: string;
+  virtualChildNodes?: VirtualNodeMap[];
 }
 
-interface NodeSubTree {
-  [key: string]: NodeSubTree | VirtualNode | ChildNode;
-}
-
-interface VirtualVariableEntry {
+interface VirtualVariable {
   value: string;
   replaceTemplate: string;
-  nodeMap: ChildNode[];
+}
+
+interface SavedVirtualTextNode {
+  textNode: ChildNode;
+  replaceTemplate: string | null;
 }
 
 interface VirtualVariableMap {
-  [key: string]: VirtualVariableEntry;
+  [variable: string]: VirtualVariable;
 }
+
+const variableExtractRegex = /{{(?<variable>[^\d][\w]+)}}/gi;
 
 export class Component {
   private _component: ChildNode;
-  private _virtualMap: NodeSubTree;
+  private _virtualMap: VirtualNodeMap;
   private _virtualVariableMap: VirtualVariableMap = {};
+  private _textNodes: ChildNode[];
+  private _savedVirtualTextNodes: SavedVirtualTextNode[] = [];
+  // private _virtualHandles: VirtualHandles = {};
 
   public constructor(template: string) {
     const temp = this.createComponent(template.trim());
 
     if (temp) {
       this._component = temp;
+
       this._virtualMap = this.createVirtualMap(this._component);
+
+      this._textNodes = this.getAllTextNodes(this._virtualMap);
+
+      this._savedVirtualTextNodes = this.saveVirtualTextNodes(this._textNodes);
+
+      this._virtualVariableMap = this.mapVirtualVariables(this._textNodes);
+
       this.updateVariables();
     } else throw new Error("Failed creating component!");
   }
@@ -41,85 +54,74 @@ export class Component {
   }
 
   private createVirtualMap(node: ChildNode) {
-    const nodeSubTree: NodeSubTree = {};
+    const virtualNodeMap: VirtualNodeMap = { node: node };
+    if (node.hasChildNodes()) {
+      virtualNodeMap.virtualChildNodes = [];
 
-    if (node.hasChildNodes())
-      node.childNodes.forEach((childNode, idx) => {
-        let handleName: string | null = null;
-        if (childNode.nodeType === Node.ELEMENT_NODE)
-          handleName = (childNode as HTMLElement).attributes.getNamedItem("#handle")?.nodeValue ?? null;
-
-        if (handleName)
-          nodeSubTree[handleName] = {
-            ...this.createVirtualMap(childNode),
-            handle: childNode,
-          };
-        else nodeSubTree[idx] = this.createVirtualMap(childNode);
+      node.childNodes.forEach((childNode) => {
+        virtualNodeMap.virtualChildNodes?.push(this.createVirtualMap(childNode));
       });
-    else {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const virtualTextNode = { node, replaceTemplate: node.textContent ?? "" };
-        this.mapVirtualVariables(virtualTextNode);
-        nodeSubTree[node.nodeType] = virtualTextNode;
-      } else {
-        nodeSubTree[node.nodeType] = { node };
-      }
     }
 
-    return nodeSubTree;
+    return virtualNodeMap;
   }
 
-  private mapVirtualVariables(virtualTextNode: VirtualNode) {
-    const { node, replaceTemplate } = virtualTextNode;
-    if (!replaceTemplate) return;
+  private getAllTextNodes(virtualNodeMap: VirtualNodeMap) {
+    const textNodes: ChildNode[] = [];
 
-    const text = node?.textContent;
-    if (!text) return;
+    function getTextNodes({ node, virtualChildNodes }: VirtualNodeMap) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push(node);
+      }
 
-    const variableExtractRegex = /{{(?<variable>[^\d][\w]+)}}/g;
-
-    let outArray: RegExpExecArray | null;
-    while ((outArray = variableExtractRegex.exec(text)) !== null) {
-      const variable = outArray.groups?.variable.trim();
-
-      if (!variable) continue;
-
-      if (this._virtualVariableMap[variable] === undefined)
-        this._virtualVariableMap[variable] = {
-          value: "",
-          replaceTemplate: replaceTemplate,
-          nodeMap: [],
-        };
-
-      const variableNodeExists =
-        this._virtualVariableMap[variable].nodeMap.findIndex((savedNode) => node === savedNode) !== -1;
-
-      if (variableNodeExists) continue;
-
-      this._virtualVariableMap[variable].nodeMap.push(virtualTextNode.node);
+      virtualChildNodes?.forEach((virtualChildNode) => {
+        getTextNodes(virtualChildNode);
+      });
     }
+
+    getTextNodes(virtualNodeMap);
+
+    return textNodes;
+  }
+
+  private saveVirtualTextNodes(textNodes: ChildNode[]) {
+    return textNodes.map((textNode) => ({ textNode: textNode, replaceTemplate: textNode.textContent }));
+  }
+
+  private mapVirtualVariables(textNodes: ChildNode[]) {
+    /* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec#finding_successive_matches */
+    variableExtractRegex.lastIndex = 0; // Reset before testing since using Global flag
+
+    const variableMap: VirtualVariableMap = {};
+
+    textNodes.forEach((textNode) => {
+      const text = textNode.textContent ?? "";
+
+      let outArray: RegExpExecArray | null;
+
+      while ((outArray = variableExtractRegex.exec(text)) !== null) {
+        const variable = outArray.groups?.variable;
+
+        if (!variable) continue;
+
+        if (variableMap[variable] === undefined) variableMap[variable] = { value: "", replaceTemplate: text };
+      }
+    });
+
+    return variableMap;
   }
 
   private updateVariables() {
-    const textNodes = Object.values(this._virtualMap)
-      .filter((node) => {
-        if (Object.hasOwn(node, Node.TEXT_NODE)) return true;
-      })
-      .map((node) => (<NodeSubTree>node)[Node.TEXT_NODE]);
+    this._savedVirtualTextNodes.forEach((savedVirtualTextNode) => {
+      const variables = Object.entries(this._virtualVariableMap);
 
-    const variables = Object.entries(this._virtualVariableMap);
+      let newTextContent = savedVirtualTextNode.replaceTemplate ?? "";
+      variables.forEach(([key, variable]) => {
+        newTextContent = newTextContent.replaceAll(`{{${key}}}`, variable.value);
+      });
 
-    for (const textNode of textNodes as VirtualNode[]) {
-      let newTextContent = textNode.replaceTemplate;
-
-      for (const [key, variable] of variables) {
-        const variableValue = variable.value;
-
-        newTextContent = newTextContent.replaceAll(`{{${key}}}`, variableValue);
-      }
-
-      textNode.node.textContent = newTextContent;
-    }
+      savedVirtualTextNode.textNode.textContent = newTextContent;
+    });
   }
 
   /* Public */

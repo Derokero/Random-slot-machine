@@ -1,10 +1,26 @@
 <div class="selection-item-container">
   {{firstName}} - {{lastName}}
+  <br />
   <span class="selection-item-text" #handle="abc">Something: </span>
   {{somethingElse}}
 
-  <!-- TODO: Fix nested variable replacement -->
-  <div>{{nested}}</div>
+  <div>
+    Nested:
+    <span #handle="what">{{nested}}</span>
+    <div>
+      {{level1}}
+      <div>
+        {{level2}}
+        <div>
+          {{level3}}
+          <div>{{deeplyNested}}</div>
+          {{level3}}
+        </div>
+        {{level2}}
+      </div>
+      {{level1}}
+    </div>
+  </div>
   {{text}}
   <br />
   {{text}}
