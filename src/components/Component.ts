@@ -17,15 +17,19 @@ interface VirtualVariableMap {
   [variable: string]: VirtualVariable;
 }
 
+interface VirtualHandlesMap {
+  [handle: string]: ChildNode;
+}
+
 const variableExtractRegex = /{{(?<variable>[^\d][\w]+)}}/g;
 
 export class Component {
   private _component: ChildNode;
   private _virtualMap: VirtualNodeMap;
   private _virtualVariableMap: VirtualVariableMap = {};
+  private _virtualHandlesMap: VirtualHandlesMap = {};
   private _textNodes: ChildNode[];
   private _savedVirtualTextNodes: SavedVirtualTextNode[] = [];
-  // private _virtualHandles: VirtualHandles = {};
 
   public constructor(template: string) {
     const temp = this.createComponent(template.trim());
@@ -55,6 +59,10 @@ export class Component {
 
   private createVirtualMap(node: ChildNode) {
     const virtualNodeMap: VirtualNodeMap = { node: node };
+
+    const handle = node.parentElement?.getAttribute("#handle");
+    if (handle) this.saveVirtualHandle(handle, node);
+
     if (node.hasChildNodes()) {
       virtualNodeMap.virtualChildNodes = [];
 
@@ -64,6 +72,10 @@ export class Component {
     }
 
     return virtualNodeMap;
+  }
+
+  private saveVirtualHandle(handleName: string, node: ChildNode) {
+    this._virtualHandlesMap[handleName] = node;
   }
 
   private getAllTextNodes(virtualNodeMap: VirtualNodeMap) {
