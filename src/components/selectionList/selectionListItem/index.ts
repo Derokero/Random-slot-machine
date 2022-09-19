@@ -1,9 +1,12 @@
 import { Component } from "../../Component";
+import style from "./style.scss";
+
 import template from "./template.html";
 
 export class SelectionListItem extends Component {
+  private _counter = 0;
   constructor() {
-    super(template);
+    super(template, style);
 
     this.updateVariable("firstName", "Bob");
     this.updateVariable("lastName", "Billy");
@@ -15,5 +18,11 @@ export class SelectionListItem extends Component {
     this.updateVariable("deeplyNested", "3 levels nested!");
 
     this.updateVariable("somethingElse", "This is some other text! A pretty long text!");
+
+    this.getElementByHandle("changeTextButton").addEventListener("click", (ev: MouseEvent) => {
+      (<HTMLSpanElement>ev.currentTarget)?.classList.toggle("clicked");
+      this._counter++;
+      this.updateVariable("clicked", `Clicked ${this._counter} times`);
+    });
   }
 }

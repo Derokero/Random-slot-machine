@@ -6,7 +6,7 @@
 
   <div>
     Nested:
-    <span #handle="what">{{nested}}</span>
+    <span #handle="nestedText">{{nested}}</span>
     <div>
       {{level1}}
       <div>
@@ -24,4 +24,6 @@
   {{text}}
   <br />
   {{text}}
+
+  <div class="change-text-btn" #handle="changeTextButton">Click me! <span>{{clicked}}</span></div>
 </div>

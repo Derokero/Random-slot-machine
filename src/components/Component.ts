@@ -1,3 +1,7 @@
+interface UniqueClassMap {
+  [className: string]: string;
+}
+
 interface VirtualNodeMap {
   node: ChildNode;
   virtualChildNodes?: VirtualNodeMap[];
@@ -31,11 +35,16 @@ export class Component {
   private _textNodes: ChildNode[];
   private _savedVirtualTextNodes: SavedVirtualTextNode[] = [];
 
-  public constructor(template: string) {
-    const temp = this.createComponent(template.trim());
+  public constructor(template: string, classMap?: UniqueClassMap) {
+    let temp = template;
+    if (classMap) {
+      temp = this.convertTemplateWithStyle(template, classMap);
+    }
 
-    if (temp) {
-      this._component = temp;
+    const component = this.createComponent(temp.trim());
+
+    if (component) {
+      this._component = component;
 
       this._virtualMap = this.createVirtualMap(this._component);
 
@@ -50,6 +59,19 @@ export class Component {
   }
 
   /* Private */
+
+  private convertTemplateWithStyle(template: string, classMap: UniqueClassMap) {
+    let newTemplate = template;
+    for (const className in classMap) {
+      if (Object.hasOwn(classMap, className)) {
+        const hashedClassName = classMap[className];
+        newTemplate = newTemplate.replaceAll(className, hashedClassName);
+      }
+    }
+
+    return newTemplate;
+  }
+
   private createComponent(template: string) {
     const templateElem = document.createElement("template");
     templateElem.innerHTML = template;
@@ -60,8 +82,13 @@ export class Component {
   private createVirtualMap(node: ChildNode) {
     const virtualNodeMap: VirtualNodeMap = { node: node };
 
-    const handle = node.parentElement?.getAttribute("#handle");
-    if (handle) this.saveVirtualHandle(handle, node);
+    const handleName = node.parentElement?.getAttribute("#handle");
+    if (handleName) {
+      const handleExists = this._virtualHandlesMap[handleName];
+      if (!handleExists) {
+        this.saveVirtualHandle(handleName, node);
+      }
+    }
 
     if (node.hasChildNodes()) {
       virtualNodeMap.virtualChildNodes = [];
@@ -149,5 +176,14 @@ export class Component {
     this._virtualVariableMap[variableName].value = newValue;
 
     this.updateVariables();
+  }
+
+  public getElementByHandle(handleName: string) {
+    const element = this._virtualHandlesMap[handleName].parentElement;
+
+    if (!element) {
+      throw new Error("No element with that handle found!");
+    }
+    return element;
   }
 }

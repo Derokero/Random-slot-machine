@@ -27,10 +27,9 @@ export const commonConfig: Configuration = {
           // Translates CSS into CommonJS
           {
             loader: "css-loader",
-
             options: {
               importLoaders: 1,
-              modules: { exportLocalsConvention: "camelCase" },
+              modules: true,
             },
           },
           // Compiles Sass to CSS
