@@ -159,7 +159,8 @@ export class Component {
         newTextContent = newTextContent.replaceAll(`{{${key}}}`, variable.value);
       });
 
-      savedVirtualTextNode.textNode.textContent = newTextContent;
+      if (savedVirtualTextNode.textNode.textContent !== newTextContent)
+        savedVirtualTextNode.textNode.textContent = newTextContent;
     });
   }
 
